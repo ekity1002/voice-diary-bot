@@ -65,7 +65,7 @@ Thumbs.db
 
 # Docker
 .dockerignore
-
+.devcontainer.json
 # Data directories
 data/
 /work/
