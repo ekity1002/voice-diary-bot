@@ -35,6 +35,6 @@
   "mounts": [
     "source=${localWorkspaceFolder}/data,target=/work,type=bind"
   ],
-  "postCreateCommand": "git config --global user.email 'dev@example.com' && git config --global user.name 'ekity1002' && uv sync --dev && pre-commit install",
+  "postCreateCommand": "git config --global user.email 'yourmail@example.com' && git config --global user.name 'your user name' && uv sync --dev && pre-commit install",
   "remoteUser": "vscode"
 }
