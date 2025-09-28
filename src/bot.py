@@ -64,19 +64,27 @@ class VoiceDiaryBot:
         Args:
             message: Discord message object
         """
+        logger.info(f"Received message from {message.author} in channel {message.channel.id} (monitored: {self.settings.channel_id})")
         # Ignore bot's own messages
         if message.author == self.client.user:
+            logger.debug("Ignoring bot's own message")
             return
 
         # Check if message is in the monitored channel
         if message.channel.id != self.settings.channel_id:
+            logger.debug(f"Message not in monitored channel: {message.channel.id} != {self.settings.channel_id}")
             return
+
+        logger.info(f"Processing message in monitored channel. Attachments: {len(message.attachments)}")
 
         # Check for audio attachments
         audio_attachments = self._get_audio_attachments(message)
 
         if not audio_attachments:
+            logger.info("No audio attachments found")
             return
+
+        logger.info(f"Found {len(audio_attachments)} audio attachment(s)")
 
         # Process each audio attachment
         for attachment in audio_attachments:
@@ -90,9 +98,7 @@ class VoiceDiaryBot:
         """
         logger.exception(f"Discord client error in event {event}")
 
-    def _get_audio_attachments(
-        self, message: discord.Message
-    ) -> list[discord.Attachment]:
+    def _get_audio_attachments(self, message: discord.Message) -> list[discord.Attachment]:
         """Extract audio attachments from message.
 
         Args:
@@ -108,19 +114,14 @@ class VoiceDiaryBot:
             if attachment.content_type and attachment.content_type.startswith("audio/"):
                 # Check file size
                 if attachment.size > self.settings.max_file_size:
-                    logger.warning(
-                        f"Audio file {attachment.filename} is too large: "
-                        f"{attachment.size} bytes (max: {self.settings.max_file_size})"
-                    )
+                    logger.warning(f"Audio file {attachment.filename} is too large: " f"{attachment.size} bytes (max: {self.settings.max_file_size})")
                     continue
 
                 audio_attachments.append(attachment)
 
         return audio_attachments
 
-    async def _process_audio_attachment(
-        self, message: discord.Message, attachment: discord.Attachment
-    ) -> None:
+    async def _process_audio_attachment(self, message: discord.Message, attachment: discord.Attachment) -> None:
         """Process a single audio attachment.
 
         Args:
@@ -135,9 +136,7 @@ class VoiceDiaryBot:
 
         try:
             # Send initial processing message
-            processing_msg = await message.reply(
-                f"🎵 Processing audio file: `{attachment.filename}`"
-            )
+            processing_msg = await message.reply(f"🎵 Processing audio file: `{attachment.filename}`")
 
             # Download audio file
             await self._download_attachment(attachment, inbox_path)
@@ -148,10 +147,7 @@ class VoiceDiaryBot:
             logger.info(f"Converted {attachment.filename} to {output_path}")
 
             # Send success message
-            await processing_msg.edit(
-                content=f"✅ Successfully converted `{attachment.filename}` to video! "
-                f"Output: `{output_path.name}`"
-            )
+            await processing_msg.edit(content=f"✅ Successfully converted `{attachment.filename}` to video! " f"Output: `{output_path.name}`")
 
             # Cleanup inbox file
             self.storage.cleanup_inbox_file(inbox_path)
@@ -167,9 +163,7 @@ class VoiceDiaryBot:
             await self._send_error_message(message, error_msg)
 
         except FFmpegError as e:
-            error_msg = (
-                f"❌ Failed to convert `{attachment.filename}`: Video processing error"
-            )
+            error_msg = f"❌ Failed to convert `{attachment.filename}`: Video processing error"
             logger.error(f"FFmpeg error for {attachment.filename}: {e}")
             await self._send_error_message(message, error_msg)
 
@@ -184,9 +178,7 @@ class VoiceDiaryBot:
             # Cleanup inbox file on error
             self.storage.cleanup_inbox_file(inbox_path)
 
-    async def _download_attachment(
-        self, attachment: discord.Attachment, output_path: Path
-    ) -> None:
+    async def _download_attachment(self, attachment: discord.Attachment, output_path: Path) -> None:
         """Download Discord attachment to local file.
 
         Args:
@@ -208,9 +200,7 @@ class VoiceDiaryBot:
         if not self.storage.validate_file_size(output_path):
             raise ValueError(f"Downloaded file exceeds size limit: {output_path}")
 
-    async def _send_error_message(
-        self, message: discord.Message, error_text: str
-    ) -> None:
+    async def _send_error_message(self, message: discord.Message, error_text: str) -> None:
         """Send error message to Discord channel.
 
         Args:
