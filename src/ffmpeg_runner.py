@@ -84,9 +84,7 @@ class FFmpegRunner:
 
         return command
 
-    async def convert_audio_to_video(
-        self, input_audio: Path, output_video: Path
-    ) -> None:
+    async def convert_audio_to_video(self, input_audio: Path, output_video: Path) -> None:
         """Convert audio file to MP4 video with background image.
 
         Args:
@@ -102,16 +100,12 @@ class FFmpegRunner:
             raise FileNotFoundError(f"Input audio file not found: {input_audio}")
 
         if not self.background_image.exists():
-            raise FileNotFoundError(
-                f"Background image not found: {self.background_image}"
-            )
+            raise FileNotFoundError(f"Background image not found: {self.background_image}")
 
         # Build FFmpeg command
         command = self.build_command(input_audio, output_video)
 
-        logger.info(
-            f"Starting FFmpeg conversion: {input_audio.name} -> {output_video.name}"
-        )
+        logger.info(f"Starting FFmpeg conversion: {input_audio.name} -> {output_video.name}")
         logger.debug(f"FFmpeg command: {' '.join(command)}")
 
         try:
@@ -122,9 +116,7 @@ class FFmpegRunner:
                 stderr=asyncio.subprocess.PIPE,
             )
 
-            stdout, stderr = await asyncio.wait_for(
-                process.communicate(), timeout=self.timeout
-            )
+            stdout, stderr = await asyncio.wait_for(process.communicate(), timeout=self.timeout)
 
             # Check if process completed successfully
             if process.returncode != 0:
@@ -141,29 +133,23 @@ class FFmpegRunner:
             if output_video.stat().st_size == 0:
                 raise FFmpegError("FFmpeg created empty output file")
 
-            logger.info(
-                f"FFmpeg conversion completed successfully: {output_video.name}"
-            )
+            logger.info(f"FFmpeg conversion completed successfully: {output_video.name}")
 
-        except TimeoutError as e:
+        except asyncio.TimeoutError as e:
             # Kill the process if it's still running
             if process.returncode is None:
                 try:
                     process.kill()
                     await process.wait()
                 except Exception as cleanup_error:
-                    logger.debug(
-                        f"Failed to kill process during cleanup: {cleanup_error}"
-                    )
+                    logger.debug(f"Failed to kill process during cleanup: {cleanup_error}")
 
             error_msg = f"FFmpeg conversion timed out after {self.timeout} seconds"
             logger.error(error_msg)
             raise FFmpegError(error_msg) from e
 
         except FileNotFoundError as e:
-            error_msg = (
-                "FFmpeg executable not found. Please ensure FFmpeg is installed."
-            )
+            error_msg = "FFmpeg executable not found. Please ensure FFmpeg is installed."
             logger.error(error_msg)
             raise FFmpegError(error_msg) from e
 
@@ -189,7 +175,7 @@ class FFmpegRunner:
             await asyncio.wait_for(process.communicate(), timeout=10)
             return process.returncode == 0
 
-        except (TimeoutError, FileNotFoundError):
+        except (asyncio.TimeoutError, FileNotFoundError):
             return False
         except Exception:
             return False
