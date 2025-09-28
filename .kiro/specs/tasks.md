@@ -34,7 +34,7 @@ Configure uv project with dependencies and development tools:
 
 **Core Dependencies**:
 - discord.py
-- python-dotenv 
+- python-dotenv
 - aiohttp
 
 **Development Dependencies**:
@@ -50,23 +50,26 @@ Configure uv project with dependencies and development tools:
 - [ ] Project metadata properly defined
 
 ### ENV-03: DevContainer Setup
-**Priority**: High | **Status**: Pending | **Dependencies**: ENV-02
+**Priority**: High | **Status**: Completed | **Dependencies**: ENV-02
 
 Create VSCode devcontainer configuration:
 
 **Files to create**:
 - `.devcontainer/devcontainer.json` - VSCode configuration
 - `.devcontainer/Dockerfile.dev` - Development container
+- `.devcontainer/setup.sh` - Robust setup script
 
 **Acceptance Criteria**:
-- [ ] DevContainer opens successfully in VSCode
-- [ ] Python 3.12 environment available
-- [ ] ffmpeg installed and accessible
-- [ ] uv package manager functional
-- [ ] All VSCode extensions loaded
+- [x] DevContainer opens successfully in VSCode
+- [x] Python 3.12 environment available
+- [x] ffmpeg installed and accessible
+- [x] uv package manager functional
+- [x] All VSCode extensions loaded
+- [x] Pre-commit hooks install successfully
+- [x] Robust error handling for setup process
 
 ### ENV-04: Pre-commit Configuration
-**Priority**: Medium | **Status**: Pending | **Dependencies**: ENV-02
+**Priority**: Medium | **Status**: Completed | **Dependencies**: ENV-02
 
 Setup pre-commit hooks for code quality:
 
@@ -78,9 +81,9 @@ Setup pre-commit hooks for code quality:
 - mypy (type checking)
 
 **Acceptance Criteria**:
-- [ ] Pre-commit hooks installed successfully
-- [ ] Hooks run on git commit
-- [ ] All quality checks pass
+- [x] Pre-commit hooks installed successfully
+- [x] Hooks run on git commit
+- [x] All quality checks pass
 
 ### ENV-05: Environment Configuration
 **Priority**: Medium | **Status**: Pending | **Dependencies**: ENV-01
@@ -141,7 +144,7 @@ Implement `src/storage.py` for file management:
 ```
 /work/
 ├── inbox/          # Temporary audio downloads
-├── out/            # Generated MP4 videos  
+├── out/            # Generated MP4 videos
 └── assets/         # Static resources (bg.jpg)
 ```
 
@@ -453,7 +456,7 @@ graph TD
     ENV-02 --> ENV-03
     ENV-02 --> ENV-04
     ENV-01 --> ENV-05
-    
+
     ENV-02 --> CORE-01
     CORE-01 --> CORE-02
     CORE-01 --> CORE-03
@@ -462,20 +465,20 @@ graph TD
     CORE-02 --> CORE-04
     CORE-03 --> CORE-04
     CORE-04 --> CORE-05
-    
+
     CORE-01 --> TEST-01
     CORE-02 --> TEST-02
     CORE-03 --> TEST-03
     CORE-04 --> TEST-04
     ENV-02 --> TEST-05
-    
+
     CORE-05 --> DOCKER-01
     DOCKER-01 --> DOCKER-02
     ENV-01 --> DOCKER-03
-    
+
     DOCKER-02 --> DOC-01
     CORE-05 --> DOC-02
-    
+
     DOC-01 --> FINAL-01
     DOC-02 --> FINAL-01
     TEST-04 --> FINAL-01
@@ -486,7 +489,7 @@ graph TD
 
 ### Sprint 1 (Development Environment)
 1. ENV-01: Project Structure Creation
-2. ENV-02: pyproject.toml Configuration  
+2. ENV-02: pyproject.toml Configuration
 3. ENV-03: DevContainer Setup
 4. ENV-05: Environment Configuration
 
