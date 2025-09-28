@@ -12,7 +12,8 @@
       "mcp__serena__write_memory",
       "mcp__serena__get_current_config",
       "mcp__codex__codex",
-      "mcp__codex__codex-reply"
+      "mcp__codex__codex-reply",
+      "mcp__gemini-cli__chat"
     ]
   },
   "enableAllProjectMcpServers": true,
