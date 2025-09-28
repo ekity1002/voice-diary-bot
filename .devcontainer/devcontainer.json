@@ -14,7 +14,8 @@
         "ms-python.flake8",
         "charliermarsh.ruff",
         "ms-python.mypy-type-checker",
-        "ms-python.black-formatter"
+        "ms-python.black-formatter",
+        "Anthropic.claude-code"
       ],
       "settings": {
         "python.defaultInterpreterPath": "/usr/local/bin/python",
