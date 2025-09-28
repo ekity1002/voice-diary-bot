@@ -7,7 +7,6 @@ to MP4 videos with configurable parameters and robust error handling.
 import asyncio
 import logging
 from pathlib import Path
-from typing import Optional
 
 from .settings import Settings
 
@@ -20,8 +19,8 @@ class FFmpegError(Exception):
     def __init__(
         self,
         message: str,
-        return_code: Optional[int] = None,
-        stderr: Optional[str] = None,
+        return_code: int | None = None,
+        stderr: str | None = None,
     ) -> None:
         super().__init__(message)
         self.return_code = return_code
@@ -146,14 +145,16 @@ class FFmpegRunner:
                 f"FFmpeg conversion completed successfully: {output_video.name}"
             )
 
-        except asyncio.TimeoutError as e:
+        except TimeoutError as e:
             # Kill the process if it's still running
             if process.returncode is None:
                 try:
                     process.kill()
                     await process.wait()
-                except Exception:
-                    pass  # Process might already be dead
+                except Exception as cleanup_error:
+                    logger.debug(
+                        f"Failed to kill process during cleanup: {cleanup_error}"
+                    )
 
             error_msg = f"FFmpeg conversion timed out after {self.timeout} seconds"
             logger.error(error_msg)
@@ -188,12 +189,12 @@ class FFmpegRunner:
             await asyncio.wait_for(process.communicate(), timeout=10)
             return process.returncode == 0
 
-        except (FileNotFoundError, asyncio.TimeoutError):
+        except (TimeoutError, FileNotFoundError):
             return False
         except Exception:
             return False
 
-    def get_estimated_duration(self, input_audio: Path) -> Optional[float]:
+    def get_estimated_duration(self, input_audio: Path) -> float | None:
         """Get estimated processing duration (placeholder for future implementation).
 
         Args:

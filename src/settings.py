@@ -7,7 +7,6 @@ validation, and type-safe settings using dataclass.
 import os
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
 
 from dotenv import load_dotenv
 
@@ -111,7 +110,8 @@ class Settings:
         # Validate audio bitrate range
         if not 64 <= self.audio_bitrate <= 128:
             raise ValueError(
-                f"Audio bitrate must be between 64 and 128 kbps, got {self.audio_bitrate}"
+                f"Audio bitrate must be between 64 and 128 kbps, "
+                f"got {self.audio_bitrate}"
             )
 
         # Ensure positive values for limits and timeouts

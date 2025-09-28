@@ -4,10 +4,7 @@ Provides file management functionality including path generation,
 directory structure management, file cleanup, and file utilities.
 """
 
-import os
-import shutil
 from pathlib import Path
-from typing import Optional
 
 from .settings import Settings
 
@@ -120,7 +117,7 @@ class StorageManager:
         """
         return file_path.exists() and file_path.is_file()
 
-    def get_file_size(self, file_path: Path) -> Optional[int]:
+    def get_file_size(self, file_path: Path) -> int | None:
         """Get file size in bytes.
 
         Args:

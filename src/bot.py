@@ -6,11 +6,10 @@ processing coordination, and user notifications.
 
 import logging
 from pathlib import Path
-from typing import Optional
+from typing import Any
 
 import aiohttp
 import discord
-from discord.ext import commands
 
 from .ffmpeg_runner import FFmpegError, FFmpegRunner
 from .settings import Settings
@@ -83,7 +82,7 @@ class VoiceDiaryBot:
         for attachment in audio_attachments:
             await self._process_audio_attachment(message, attachment)
 
-    async def on_error(self, event: str, *args, **kwargs) -> None:
+    async def on_error(self, event: str, *args: Any, **kwargs: Any) -> None:
         """Handle Discord client errors.
 
         Args:

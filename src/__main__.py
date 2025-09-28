@@ -8,7 +8,7 @@ import asyncio
 import logging
 import signal
 import sys
-from typing import Optional
+from typing import Any
 
 from .bot import VoiceDiaryBot
 from .settings import Settings
@@ -19,8 +19,8 @@ class Application:
 
     def __init__(self) -> None:
         """Initialize the application."""
-        self.bot: Optional[VoiceDiaryBot] = None
-        self.settings: Optional[Settings] = None
+        self.bot: VoiceDiaryBot | None = None
+        self.settings: Settings | None = None
         self._shutdown_event = asyncio.Event()
 
     def setup_logging(self) -> None:
@@ -40,7 +40,7 @@ class Application:
     def setup_signal_handlers(self) -> None:
         """Setup signal handlers for graceful shutdown."""
 
-        def signal_handler(signum: int, frame) -> None:
+        def signal_handler(signum: int, frame: Any) -> None:
             """Handle shutdown signals."""
             logger = logging.getLogger(__name__)
             logger.info(f"Received signal {signum}, initiating shutdown...")
@@ -73,6 +73,8 @@ class Application:
 
         try:
             # Start bot
+            if self.bot is None:
+                raise RuntimeError("Bot not initialized. Call initialize() first.")
             bot_task = asyncio.create_task(self.bot.start())
             shutdown_task = asyncio.create_task(self._shutdown_event.wait())
 
@@ -146,7 +148,7 @@ if __name__ == "__main__":
     try:
         asyncio.run(main())
     except KeyboardInterrupt:
-        print("\nShutdown complete")
+        logging.getLogger(__name__).info("Shutdown complete")
     except Exception as e:
-        print(f"Fatal error: {e}")
+        logging.getLogger(__name__).error(f"Fatal error: {e}")
         sys.exit(1)
