@@ -48,13 +48,16 @@ class TranscriptionHandler:
         api_url = f"{self.settings.whisper_api_url}/v1/audio/transcriptions"
 
         try:
+            # Read audio file content
+            with open(audio_path, "rb") as audio_file:
+                audio_content = audio_file.read()
+
             async with aiohttp.ClientSession() as session:
                 # Prepare multipart form data
                 data = aiohttp.FormData()
 
-                # Add audio file
-                with open(audio_path, "rb") as audio_file:
-                    data.add_field("file", audio_file, filename=audio_path.name)
+                # Add audio file with content
+                data.add_field("file", audio_content, filename=audio_path.name, content_type="application/octet-stream")
 
                 # Add model parameter
                 data.add_field("model", self.settings.whisper_model)
