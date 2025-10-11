@@ -1,0 +1,70 @@
+version: '3.8'
+
+services:
+  voice-diary-bot:
+    build: .
+    container_name: discord-voice-diary-bot
+    restart: unless-stopped
+
+    # Environment variables
+    env_file:
+      - .env
+
+    environment:
+      # Override defaults for container environment
+      - WORK_DIR=/work
+      - BACKGROUND_IMAGE=/work/assets/bg.jpg
+      # Set timezone to JST
+      - TZ=Asia/Tokyo
+
+    # Volume mounts
+    volumes:
+      # Persistent work directory for audio files and output
+      - voice_diary_data:/work
+      # Optional: mount custom background image
+      # - ./custom-bg.jpg:/work/assets/bg.jpg:ro
+      # Optional: mount custom assets
+      # - ./assets:/work/assets:ro
+
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 4G  # Increased from 1G to handle long audio processing
+        reservations:
+          cpus: '0.5'
+          memory: 512M  # Increased from 256M
+
+    # Health check
+    healthcheck:
+      test: ["CMD", "python", "-c", "import asyncio; from src.ffmpeg_runner import FFmpegRunner; from src.settings import Settings; runner = FFmpegRunner(Settings.from_env()); exit(0 if asyncio.run(runner.validate_ffmpeg_installation()) else 1)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+    # Logging configuration
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    # Network configuration (optional)
+    # networks:
+    #   - voice_diary_network
+
+# Volumes
+volumes:
+  voice_diary_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./data
+
+# Optional: Custom network
+# networks:
+#   voice_diary_network:
+#     driver: bridge

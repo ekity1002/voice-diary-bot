@@ -1,0 +1,31 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mkdir:*)",
+      "Bash(find:*)",
+      "mcp__serena__find_file",
+      "Bash(uv run ruff:*)",
+      "mcp__serena__activate_project",
+      "mcp__serena__list_dir",
+      "mcp__serena__check_onboarding_performed",
+      "mcp__serena__onboarding",
+      "mcp__serena__write_memory",
+      "mcp__serena__get_current_config",
+      "mcp__codex__codex",
+      "mcp__codex__codex-reply",
+      "mcp__gemini-cli__chat",
+      "mcp__serena__read_memory",
+      "mcp__serena__find_symbol",
+      "mcp__serena__search_for_pattern",
+      "mcp__serena__get_symbols_overview",
+      "mcp__gemini-cli__googleSearch"
+    ]
+  },
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "gemini-cli",
+    "codex",
+    "context7",
+    "serena"
+  ]
+}
