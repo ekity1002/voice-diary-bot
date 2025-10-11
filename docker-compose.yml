@@ -14,6 +14,8 @@ services:
       # Override defaults for container environment
       - WORK_DIR=/work
       - BACKGROUND_IMAGE=/work/assets/bg.jpg
+      # Set timezone to JST
+      - TZ=Asia/Tokyo
 
     # Volume mounts
     volumes:
