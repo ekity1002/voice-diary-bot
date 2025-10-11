@@ -6,9 +6,17 @@ validation, and type-safe settings using dataclass.
 
 import os
 from dataclasses import dataclass
+from enum import Enum
 from pathlib import Path
 
 from dotenv import load_dotenv
+
+
+class BotMode(Enum):
+    """Bot operation mode."""
+
+    VIDEO = "video"
+    TRANSCRIPTION = "transcription"
 
 
 @dataclass
@@ -22,6 +30,9 @@ class Settings:
     # Required settings
     discord_token: str
     channel_id: int
+
+    # Bot operation mode
+    bot_mode: BotMode = BotMode.VIDEO
 
     # Optional settings with defaults
     work_dir: Path = Path("/work")
@@ -84,9 +95,17 @@ class Settings:
         # Processing timeout
         processing_timeout = int(os.getenv("PROCESSING_TIMEOUT", "3600"))
 
+        # Bot mode
+        bot_mode_str = os.getenv("BOT_MODE", "video").lower()
+        try:
+            bot_mode = BotMode(bot_mode_str)
+        except ValueError as e:
+            raise ValueError(f"BOT_MODE must be 'video' or 'transcription', got '{bot_mode_str}'") from e
+
         return cls(
             discord_token=discord_token,
             channel_id=channel_id,
+            bot_mode=bot_mode,
             work_dir=work_dir,
             background_image=background_image,
             delete_on_success=delete_on_success,

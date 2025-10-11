@@ -12,8 +12,9 @@ import aiohttp
 import discord
 
 from .ffmpeg_runner import FFmpegError, FFmpegRunner
-from .settings import Settings
+from .settings import BotMode, Settings
 from .storage import StorageManager
+from .transcription import TranscriptionHandler
 
 logger = logging.getLogger(__name__)
 
@@ -34,6 +35,7 @@ class VoiceDiaryBot:
         self.settings = settings
         self.storage = StorageManager(settings)
         self.ffmpeg = FFmpegRunner(settings)
+        self.transcription = TranscriptionHandler(settings)
 
         # Configure Discord intents
         intents = discord.Intents.default()
@@ -51,12 +53,16 @@ class VoiceDiaryBot:
         """Handle bot ready event."""
         logger.info(f"Bot logged in as {self.client.user}")
         logger.info(f"Monitoring channel ID: {self.settings.channel_id}")
+        logger.info(f"Bot mode: {self.settings.bot_mode.value}")
 
-        # Validate FFmpeg installation
-        if not await self.ffmpeg.validate_ffmpeg_installation():
-            logger.error("FFmpeg is not installed or not accessible!")
+        # Validate FFmpeg installation (only for video mode)
+        if self.settings.bot_mode == BotMode.VIDEO:
+            if not await self.ffmpeg.validate_ffmpeg_installation():
+                logger.error("FFmpeg is not installed or not accessible!")
+            else:
+                logger.info("FFmpeg installation validated successfully")
         else:
-            logger.info("FFmpeg installation validated successfully")
+            logger.info("Running in transcription mode - FFmpeg validation skipped")
 
     async def on_message(self, message: discord.Message) -> None:
         """Handle incoming Discord messages.
@@ -130,6 +136,22 @@ class VoiceDiaryBot:
         """
         logger.info(f"Processing audio attachment: {attachment.filename}")
 
+        # Branch based on bot mode
+        if self.settings.bot_mode == BotMode.VIDEO:
+            await self._process_video_mode(message, attachment)
+        elif self.settings.bot_mode == BotMode.TRANSCRIPTION:
+            await self._process_transcription_mode(message, attachment)
+        else:
+            logger.error(f"Unknown bot mode: {self.settings.bot_mode}")
+            await message.reply("❌ Invalid bot mode configuration")
+
+    async def _process_video_mode(self, message: discord.Message, attachment: discord.Attachment) -> None:
+        """Process audio attachment in video mode.
+
+        Args:
+            message: Original Discord message
+            attachment: Audio attachment to process
+        """
         # Generate file paths
         inbox_path = self.storage.get_inbox_path(attachment.filename)
         output_path = self.storage.get_output_path(attachment.filename)
@@ -173,6 +195,51 @@ class VoiceDiaryBot:
         except Exception as e:
             error_msg = f"❌ Unexpected error processing `{attachment.filename}`"
             logger.exception(f"Unexpected error processing {attachment.filename}: {e}")
+            await self._send_error_message(message, error_msg)
+
+            # Cleanup inbox file on error
+            self.storage.cleanup_inbox_file(inbox_path)
+
+    async def _process_transcription_mode(self, message: discord.Message, attachment: discord.Attachment) -> None:
+        """Process audio attachment in transcription mode.
+
+        Args:
+            message: Original Discord message
+            attachment: Audio attachment to process
+        """
+        # Generate file path
+        inbox_path = self.storage.get_inbox_path(attachment.filename)
+
+        try:
+            # Send initial processing message
+            processing_msg = await message.reply(f"🎤 [PLACEHOLDER] Transcribing audio: `{attachment.filename}`")
+
+            # Download audio file
+            await self._download_attachment(attachment, inbox_path)
+            logger.info(f"Downloaded {attachment.filename} to {inbox_path}")
+
+            # Transcribe and save to markdown
+            markdown_path = await self.transcription.process_transcription(inbox_path, attachment.filename)
+            logger.info(f"[PLACEHOLDER] Transcription complete: {markdown_path}")
+
+            # Send success message
+            await processing_msg.edit(content=f"✅ [PLACEHOLDER] Transcription complete! Saved to: `{markdown_path.name}`")
+
+            # Cleanup inbox file
+            self.storage.cleanup_inbox_file(inbox_path)
+
+            # Optionally cleanup markdown file
+            if self.settings.delete_on_success:
+                logger.info(f"[PLACEHOLDER] Would cleanup markdown file: {markdown_path}")
+
+        except aiohttp.ClientError as e:
+            error_msg = f"❌ Failed to download `{attachment.filename}`: Network error"
+            logger.error(f"Download failed for {attachment.filename}: {e}")
+            await self._send_error_message(message, error_msg)
+
+        except Exception as e:
+            error_msg = f"❌ Unexpected error transcribing `{attachment.filename}`"
+            logger.exception(f"Unexpected error transcribing {attachment.filename}: {e}")
             await self._send_error_message(message, error_msg)
 
             # Cleanup inbox file on error
