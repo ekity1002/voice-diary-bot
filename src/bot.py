@@ -212,7 +212,7 @@ class VoiceDiaryBot:
 
         try:
             # Send initial processing message
-            processing_msg = await message.reply(f"🎤 [PLACEHOLDER] Transcribing audio: `{attachment.filename}`")
+            processing_msg = await message.reply(f"🎤 Transcribing audio: `{attachment.filename}`")
 
             # Download audio file
             await self._download_attachment(attachment, inbox_path)
@@ -220,17 +220,15 @@ class VoiceDiaryBot:
 
             # Transcribe and save to markdown
             markdown_path = await self.transcription.process_transcription(inbox_path, attachment.filename)
-            logger.info(f"[PLACEHOLDER] Transcription complete: {markdown_path}")
+            logger.info(f"Transcription complete: {markdown_path}")
 
             # Send success message
-            await processing_msg.edit(content=f"✅ [PLACEHOLDER] Transcription complete! Saved to: `{markdown_path.name}`")
+            await processing_msg.edit(content=f"✅ Transcription complete! Saved to: `{markdown_path.name}`")
 
             # Cleanup inbox file
             self.storage.cleanup_inbox_file(inbox_path)
 
-            # Optionally cleanup markdown file
-            if self.settings.delete_on_success:
-                logger.info(f"[PLACEHOLDER] Would cleanup markdown file: {markdown_path}")
+            # Note: Markdown files are never deleted in transcription mode
 
         except aiohttp.ClientError as e:
             error_msg = f"❌ Failed to download `{attachment.filename}`: Network error"

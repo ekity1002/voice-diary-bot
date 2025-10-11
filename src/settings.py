@@ -42,6 +42,11 @@ class Settings:
     max_file_size: int = 25 * 1024 * 1024  # 25MB in bytes
     processing_timeout: int = 3600  # 60 minutes in seconds
 
+    # Whisper API settings (for transcription mode)
+    whisper_api_url: str = "http://localhost:8000"
+    whisper_model: str = "Systran/faster-whisper-medium"
+    transcription_output_dir: Path = Path("/transcriptions")
+
     @classmethod
     def from_env(cls) -> "Settings":
         """Create Settings instance from environment variables.
@@ -102,6 +107,11 @@ class Settings:
         except ValueError as e:
             raise ValueError(f"BOT_MODE must be 'video' or 'transcription', got '{bot_mode_str}'") from e
 
+        # Whisper API settings
+        whisper_api_url = os.getenv("WHISPER_API_URL", "http://localhost:8000")
+        whisper_model = os.getenv("WHISPER_MODEL", "Systran/faster-whisper-medium")
+        transcription_output_dir = Path(os.getenv("TRANSCRIPTION_OUTPUT_DIR", "/transcriptions"))
+
         return cls(
             discord_token=discord_token,
             channel_id=channel_id,
@@ -112,6 +122,9 @@ class Settings:
             audio_bitrate=audio_bitrate,
             max_file_size=max_file_size,
             processing_timeout=processing_timeout,
+            whisper_api_url=whisper_api_url,
+            whisper_model=whisper_model,
+            transcription_output_dir=transcription_output_dir,
         )
 
     def __post_init__(self) -> None:
@@ -121,6 +134,8 @@ class Settings:
             self.work_dir = Path(self.work_dir)
         if isinstance(self.background_image, str):
             self.background_image = Path(self.background_image)
+        if isinstance(self.transcription_output_dir, str):
+            self.transcription_output_dir = Path(self.transcription_output_dir)
 
         # Validate audio bitrate range
         if not 64 <= self.audio_bitrate <= 128:
