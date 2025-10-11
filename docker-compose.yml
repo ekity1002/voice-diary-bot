@@ -29,10 +29,10 @@ services:
       resources:
         limits:
           cpus: '2.0'
-          memory: 1G
+          memory: 4G  # Increased from 1G to handle long audio processing
         reservations:
           cpus: '0.5'
-          memory: 256M
+          memory: 512M  # Increased from 256M
 
     # Health check
     healthcheck:

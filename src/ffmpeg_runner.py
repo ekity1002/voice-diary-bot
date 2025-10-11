@@ -55,6 +55,9 @@ class FFmpegRunner:
         Returns:
             list[str]: FFmpeg command as list of arguments
         """
+        # Check if we can copy audio to avoid re-encoding
+        can_copy_audio = self._can_copy_audio(input_audio)
+
         command = [
             "ffmpeg",
             "-y",  # Overwrite output file
@@ -66,23 +69,92 @@ class FFmpegRunner:
             str(input_audio),
             "-c:v",
             "libx264",
+            "-preset",
+            "veryfast",  # Faster encoding, lower memory usage
+            "-profile:v",
+            "baseline",  # Lower complexity profile
             "-tune",
             "stillimage",
             "-pix_fmt",
             "yuv420p",
             "-c:a",
-            "aac",
-            "-b:a",
-            f"{self.audio_bitrate}k",
-            "-ac",
-            "1",  # Mono audio
-            "-shortest",  # Stop when shortest input ends
-            "-movflags",
-            "+faststart",  # Enable fast start for web playback
-            str(output_video),
+            "copy" if can_copy_audio else "aac",  # Copy audio when possible
         ]
 
+        # Only add bitrate if we're re-encoding audio
+        if not can_copy_audio:
+            command.extend(["-b:a", f"{self.audio_bitrate}k"])
+
+        command.extend(
+            [
+                "-ac",
+                "1",  # Mono audio
+                "-shortest",  # Stop when shortest input ends
+                "-movflags",
+                "+faststart",  # Enable fast start for web playback
+                "-max_muxing_queue_size",
+                "1024",  # Limit queue size to reduce memory usage
+                str(output_video),
+            ]
+        )
+
         return command
+
+    def _can_copy_audio(self, input_audio: Path) -> bool:
+        """Check if audio can be copied without re-encoding.
+
+        Args:
+            input_audio: Path to input audio file
+
+        Returns:
+            bool: True if audio is already AAC and mono
+        """
+        # For now, assume AAC files can be copied if they're already AAC
+        # A more sophisticated implementation would use ffprobe
+        return input_audio.suffix.lower() in [".aac", ".m4a"]
+
+    async def _monitor_process_with_timeout(self, process: asyncio.subprocess.Process, input_audio: Path) -> tuple[bytes, bytes]:
+        """Monitor FFmpeg process with progress logging and timeout handling.
+
+        Args:
+            process: Running FFmpeg subprocess
+            input_audio: Input audio file for logging context
+
+        Returns:
+            tuple[bytes, bytes]: stdout and stderr from process
+
+        Raises:
+            asyncio.TimeoutError: If process exceeds timeout
+        """
+        start_time = asyncio.get_event_loop().time()
+        check_interval = 30  # Check every 30 seconds
+        last_check = start_time
+
+        while process.returncode is None:
+            try:
+                # Wait for process to complete or timeout interval
+                stdout, stderr = await asyncio.wait_for(
+                    process.communicate(), timeout=min(check_interval, self.timeout - (asyncio.get_event_loop().time() - start_time))
+                )
+                return stdout, stderr
+            except asyncio.TimeoutError:
+                current_time = asyncio.get_event_loop().time()
+                elapsed = current_time - start_time
+
+                # Check if we've exceeded the total timeout
+                if elapsed >= self.timeout:
+                    raise asyncio.TimeoutError(f"FFmpeg conversion timed out after {elapsed:.1f} seconds") from None
+
+                # Log progress every 30 seconds
+                if current_time - last_check >= check_interval:
+                    logger.info(f"FFmpeg still processing {input_audio.name} - elapsed: {elapsed:.1f}s")
+                    last_check = current_time
+
+                # Continue monitoring
+                await asyncio.sleep(1)
+
+        # Process completed without timeout
+        return await process.communicate()
 
     async def convert_audio_to_video(self, input_audio: Path, output_video: Path) -> None:
         """Convert audio file to MP4 video with background image.
@@ -116,7 +188,8 @@ class FFmpegRunner:
                 stderr=asyncio.subprocess.PIPE,
             )
 
-            stdout, stderr = await asyncio.wait_for(process.communicate(), timeout=self.timeout)
+            # Monitor process with progress logging
+            stdout, stderr = await self._monitor_process_with_timeout(process, input_audio)
 
             # Check if process completed successfully
             if process.returncode != 0:

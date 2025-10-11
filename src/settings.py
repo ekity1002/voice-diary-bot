@@ -29,7 +29,7 @@ class Settings:
     delete_on_success: bool = False
     audio_bitrate: int = 96
     max_file_size: int = 25 * 1024 * 1024  # 25MB in bytes
-    processing_timeout: int = 300  # 5 minutes in seconds
+    processing_timeout: int = 3600  # 60 minutes in seconds
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -61,9 +61,7 @@ class Settings:
         try:
             channel_id = int(channel_id_str)
         except ValueError as e:
-            raise ValueError(
-                f"CHANNEL_ID must be a valid integer: {channel_id_str}"
-            ) from e
+            raise ValueError(f"CHANNEL_ID must be a valid integer: {channel_id_str}") from e
 
         # Get optional settings with defaults
         work_dir = Path(os.getenv("WORK_DIR", "/work"))
@@ -78,15 +76,13 @@ class Settings:
         # Audio bitrate with validation
         audio_bitrate = int(os.getenv("AUDIO_BITRATE", "96"))
         if not 64 <= audio_bitrate <= 128:
-            raise ValueError(
-                f"AUDIO_BITRATE must be between 64 and 128 kbps, got {audio_bitrate}"
-            )
+            raise ValueError(f"AUDIO_BITRATE must be between 64 and 128 kbps, got {audio_bitrate}")
 
         # File size limit
         max_file_size = int(os.getenv("MAX_FILE_SIZE", str(25 * 1024 * 1024)))
 
         # Processing timeout
-        processing_timeout = int(os.getenv("PROCESSING_TIMEOUT", "300"))
+        processing_timeout = int(os.getenv("PROCESSING_TIMEOUT", "3600"))
 
         return cls(
             discord_token=discord_token,
@@ -109,10 +105,7 @@ class Settings:
 
         # Validate audio bitrate range
         if not 64 <= self.audio_bitrate <= 128:
-            raise ValueError(
-                f"Audio bitrate must be between 64 and 128 kbps, "
-                f"got {self.audio_bitrate}"
-            )
+            raise ValueError(f"Audio bitrate must be between 64 and 128 kbps, " f"got {self.audio_bitrate}")
 
         # Ensure positive values for limits and timeouts
         if self.max_file_size <= 0:
