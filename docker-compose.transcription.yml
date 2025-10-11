@@ -1,0 +1,116 @@
+services:
+  # Faster Whisper Server for transcription
+  faster-whisper-server:
+    image: fedirz/faster-whisper-server:latest-cuda
+    container_name: faster-whisper-server
+    restart: unless-stopped
+
+    environment:
+      - WHISPER__MODEL=Systran/faster-whisper-medium
+
+    ports:
+      - "8000:8000"
+
+    volumes:
+      # Cache Hugging Face models
+      - ~/.cache/huggingface:/root/.cache/huggingface
+
+    # GPU support
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+    # Logging configuration
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    networks:
+      - transcription_network
+
+  # Voice Diary Bot in transcription mode
+  voice-diary-bot:
+    build: .
+    container_name: discord-voice-diary-bot-transcription
+    restart: unless-stopped
+    depends_on:
+      faster-whisper-server:
+        condition: service_started
+
+    # Environment variables
+    env_file:
+      - .env
+
+    environment:
+      # Transcription mode settings
+      - BOT_MODE=transcription
+      - WORK_DIR=/work
+      - WHISPER_API_URL=http://faster-whisper-server:8000
+      - WHISPER_MODEL=Systran/faster-whisper-medium
+      - TRANSCRIPTION_OUTPUT_DIR=/transcriptions
+      # Set timezone to JST
+      - TZ=Asia/Tokyo
+
+    # Volume mounts
+    volumes:
+      # Persistent work directory for inbox (downloaded audio files)
+      - voice_diary_data:/work
+      # Transcription output directory (voice memos)
+      - transcription_data:/transcriptions
+
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+
+    # Health check (simplified for transcription mode)
+    healthcheck:
+      test: ["CMD", "python", "-c", "import sys; sys.exit(0)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+    # Logging configuration
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    networks:
+      - transcription_network
+
+# Volumes
+volumes:
+  # Inbox directory for downloaded audio files
+  voice_diary_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./data
+
+  # Voice memo transcription output directory
+  transcription_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /home/tomono/obsidian/daily
+
+# Network
+networks:
+  transcription_network:
+    driver: bridge

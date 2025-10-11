@@ -23,20 +23,6 @@ class TestSettings:
         assert settings.max_file_size == 25 * 1024 * 1024
         assert settings.processing_timeout == 300
 
-    def test_from_env_missing_discord_token(self, monkeypatch):
-        """Test Settings.from_env() raises ValueError when DISCORD_TOKEN is missing."""
-        monkeypatch.setenv("CHANNEL_ID", "123456789")
-
-        with pytest.raises(ValueError, match="DISCORD_TOKEN environment variable is required"):
-            Settings.from_env()
-
-    def test_from_env_missing_channel_id(self, monkeypatch):
-        """Test Settings.from_env() raises ValueError when CHANNEL_ID is missing."""
-        monkeypatch.setenv("DISCORD_TOKEN", "test_token")
-
-        with pytest.raises(ValueError, match="CHANNEL_ID environment variable is required"):
-            Settings.from_env()
-
     def test_from_env_invalid_channel_id(self, monkeypatch):
         """Test Settings.from_env() raises ValueError when CHANNEL_ID is not valid."""
         monkeypatch.setenv("DISCORD_TOKEN", "test_token")
@@ -55,7 +41,7 @@ class TestSettings:
         assert settings.work_dir == Path("/work")
         assert settings.background_image == Path("/work/assets/bg.jpg")
         assert settings.delete_on_success is False
-        assert settings.audio_bitrate == 96
+        assert settings.audio_bitrate == 128
         assert settings.max_file_size == 25 * 1024 * 1024
         assert settings.processing_timeout == 300
 

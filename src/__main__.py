@@ -58,6 +58,7 @@ class Application:
             # Load settings from environment
             self.settings = Settings.from_env()
             logger.info("Settings loaded successfully")
+            logger.info(f"Bot mode: {self.settings.bot_mode.value}")
 
             # Initialize bot
             self.bot = VoiceDiaryBot(self.settings)
@@ -81,9 +82,7 @@ class Application:
             logger.info("Application started successfully")
 
             # Wait for either bot completion or shutdown signal
-            done, pending = await asyncio.wait(
-                {bot_task, shutdown_task}, return_when=asyncio.FIRST_COMPLETED
-            )
+            done, pending = await asyncio.wait({bot_task, shutdown_task}, return_when=asyncio.FIRST_COMPLETED)
 
             # Cancel remaining tasks
             for task in pending:

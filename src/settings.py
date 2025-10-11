@@ -6,9 +6,17 @@ validation, and type-safe settings using dataclass.
 
 import os
 from dataclasses import dataclass
+from enum import Enum
 from pathlib import Path
 
 from dotenv import load_dotenv
+
+
+class BotMode(Enum):
+    """Bot operation mode."""
+
+    VIDEO = "video"
+    TRANSCRIPTION = "transcription"
 
 
 @dataclass
@@ -23,6 +31,9 @@ class Settings:
     discord_token: str
     channel_id: int
 
+    # Bot operation mode
+    bot_mode: BotMode = BotMode.VIDEO
+
     # Optional settings with defaults
     work_dir: Path = Path("/work")
     background_image: Path = Path("/work/assets/bg.jpg")
@@ -30,6 +41,11 @@ class Settings:
     audio_bitrate: int = 96
     max_file_size: int = 25 * 1024 * 1024  # 25MB in bytes
     processing_timeout: int = 3600  # 60 minutes in seconds
+
+    # Whisper API settings (for transcription mode)
+    whisper_api_url: str = "http://localhost:8000"
+    whisper_model: str = "Systran/faster-whisper-medium"
+    transcription_output_dir: Path = Path("/transcriptions")
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -84,15 +100,31 @@ class Settings:
         # Processing timeout
         processing_timeout = int(os.getenv("PROCESSING_TIMEOUT", "3600"))
 
+        # Bot mode
+        bot_mode_str = os.getenv("BOT_MODE", "video").lower()
+        try:
+            bot_mode = BotMode(bot_mode_str)
+        except ValueError as e:
+            raise ValueError(f"BOT_MODE must be 'video' or 'transcription', got '{bot_mode_str}'") from e
+
+        # Whisper API settings
+        whisper_api_url = os.getenv("WHISPER_API_URL", "http://localhost:8000")
+        whisper_model = os.getenv("WHISPER_MODEL", "Systran/faster-whisper-medium")
+        transcription_output_dir = Path(os.getenv("TRANSCRIPTION_OUTPUT_DIR", "/transcriptions"))
+
         return cls(
             discord_token=discord_token,
             channel_id=channel_id,
+            bot_mode=bot_mode,
             work_dir=work_dir,
             background_image=background_image,
             delete_on_success=delete_on_success,
             audio_bitrate=audio_bitrate,
             max_file_size=max_file_size,
             processing_timeout=processing_timeout,
+            whisper_api_url=whisper_api_url,
+            whisper_model=whisper_model,
+            transcription_output_dir=transcription_output_dir,
         )
 
     def __post_init__(self) -> None:
@@ -102,6 +134,8 @@ class Settings:
             self.work_dir = Path(self.work_dir)
         if isinstance(self.background_image, str):
             self.background_image = Path(self.background_image)
+        if isinstance(self.transcription_output_dir, str):
+            self.transcription_output_dir = Path(self.transcription_output_dir)
 
         # Validate audio bitrate range
         if not 64 <= self.audio_bitrate <= 128:
