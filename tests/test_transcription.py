@@ -23,6 +23,12 @@ class TestGenerateDailyTemplate:
         test_date = datetime(2025, 10, 11, 15, 30, 45)
         template = handler._generate_daily_template(test_date)
 
+        # Check front matter
+        assert template.startswith("---\n")
+        assert "tags:" in template
+        assert "  - 日記" in template
+        assert "---\n\n" in template
+
         # Check breadcrumb
         assert "[[2025]]" in template
         assert "[[2025-Q4|Q4]]" in template
