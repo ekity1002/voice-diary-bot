@@ -92,8 +92,11 @@ class TranscriptionHandler:
             date: Date for the daily note
 
         Returns:
-            str: Formatted template header with breadcrumb, week nav, and week days
+            str: Formatted template header with front matter, breadcrumb, week nav, and week days
         """
+        # === Front Matter ===
+        front_matter = "---\ntags:\n  - 日記\n---\n\n"
+
         # === Breadcrumb ===
         year = date.year
         quarter = (date.month - 1) // 3 + 1
@@ -116,7 +119,7 @@ class TranscriptionHandler:
         ]
         week_days = " - ".join(days)
 
-        return f"{breadcrumb}\n{week_nav}\n{week_days}\n\n"
+        return f"{front_matter}{breadcrumb}\n{week_nav}\n{week_days}\n\n"
 
     async def save_to_markdown(self, filename: str, transcript: str) -> Path:
         """Save transcript to markdown file.
