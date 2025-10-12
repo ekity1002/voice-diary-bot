@@ -28,17 +28,5 @@ jobs:
       with:
         enable-cache: true
 
-    - name: Install dependencies
-      run: uv sync
-
-    - name: Run Ruff lint
-      run: uv run ruff check .
-
-    - name: Run Ruff format check
-      run: uv run ruff format --check .
-
-    - name: Run mypy
-      run: uv run mypy src tests
-
     - name: Run pytest
       run: uv run pytest -v

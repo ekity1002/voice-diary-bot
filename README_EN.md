@@ -4,7 +4,7 @@
 
 [![Python 3.12](https://img.shields.io/badge/Python-3.12-blue.svg)](https://www.python.org/downloads/)
 [![Docker](https://img.shields.io/badge/Docker-Compose-2496ED.svg?logo=docker)](https://www.docker.com/)
-[![Tests](https://img.shields.io/badge/Tests-28%20Passed-success.svg)]()
+[![CI](https://github.com/ekity1002/voice-diary-bot/workflows/CI/badge.svg)](https://github.com/ekity1002/voice-diary-bot/actions)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
 Multi-functional Bot for Automatic Voice Message Processing on Discord
