@@ -52,7 +52,9 @@ class TranscriptionHandler:
             with open(audio_path, "rb") as audio_file:
                 audio_content = audio_file.read()
 
-            async with aiohttp.ClientSession() as session:
+            # Configure timeout for long audio files (up to 30 minutes)
+            timeout = aiohttp.ClientTimeout(total=1800)  # 30 minutes
+            async with aiohttp.ClientSession(timeout=timeout) as session:
                 # Prepare multipart form data
                 data = aiohttp.FormData()
 
