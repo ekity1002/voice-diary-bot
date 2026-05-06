@@ -8,7 +8,7 @@ import pytest
 from aiohttp import ClientError
 
 from src.settings import Settings
-from src.transcription import TranscriptionHandler
+from src.transcription import TranscriptionHandler, _extract_datetime_from_filename
 
 
 class TestGenerateDailyTemplate:
@@ -257,6 +257,109 @@ class TestSaveToMarkdown:
 
         pattern = r"^\d{4}-\d{2}-\d{2}\.md$"
         assert re.match(pattern, result_path.name)
+
+    @pytest.mark.asyncio
+    async def test_save_to_markdown_uses_datetime_from_filename(
+        self, mock_transcription_env_vars: None, temp_dir: Path
+    ) -> None:
+        """Filename like URecorder_YYYYMMDD_HHMMSS.ext should drive the daily-note date."""
+        import os
+
+        os.environ["TRANSCRIPTION_OUTPUT_DIR"] = str(temp_dir)
+
+        settings = Settings.from_env()
+        handler = TranscriptionHandler(settings)
+
+        filename = "URecorder_20260401_221513.wav"
+        result_path = await handler.save_to_markdown(filename, "Recorded content")
+
+        # File should be named after the date in the filename, not "now"
+        assert result_path.name == "2026-04-01.md"
+
+        content = result_path.read_text(encoding="utf-8")
+        # Time heading should reflect the parsed time
+        assert "## 22:15:13 - URecorder_20260401_221513.wav" in content
+        # Daily template should be generated for the parsed date (2026-04-01 is W14)
+        assert "[[2026]]" in content
+        assert "[[2026-Q2|Q2]]" in content
+        assert "Week 14" in content
+
+    @pytest.mark.asyncio
+    async def test_save_to_markdown_falls_back_when_filename_has_no_date(
+        self, mock_transcription_env_vars: None, temp_dir: Path
+    ) -> None:
+        """Filenames without a parseable timestamp should fall back to datetime.now()."""
+        import os
+
+        os.environ["TRANSCRIPTION_OUTPUT_DIR"] = str(temp_dir)
+
+        settings = Settings.from_env()
+        handler = TranscriptionHandler(settings)
+
+        fixed_now = datetime(2025, 7, 15, 9, 30, 0)
+        with patch("src.transcription.datetime") as mock_datetime:
+            mock_datetime.now.return_value = fixed_now
+            # Keep strptime/etc. behaving normally
+            mock_datetime.strptime.side_effect = datetime.strptime
+            mock_datetime.side_effect = lambda *a, **kw: datetime(*a, **kw)
+
+            result_path = await handler.save_to_markdown("voice.ogg", "Fallback content")
+
+        assert result_path.name == "2025-07-15.md"
+        content = result_path.read_text(encoding="utf-8")
+        assert "## 09:30:00 - voice.ogg" in content
+
+    @pytest.mark.asyncio
+    async def test_save_to_markdown_falls_back_on_invalid_date_in_filename(
+        self, mock_transcription_env_vars: None, temp_dir: Path
+    ) -> None:
+        """A YYYYMMDD_HHMMSS-shaped substring with invalid values must fall back, not crash."""
+        import os
+
+        os.environ["TRANSCRIPTION_OUTPUT_DIR"] = str(temp_dir)
+
+        settings = Settings.from_env()
+        handler = TranscriptionHandler(settings)
+
+        fixed_now = datetime(2025, 7, 15, 9, 30, 0)
+        with patch("src.transcription.datetime") as mock_datetime:
+            mock_datetime.now.return_value = fixed_now
+            mock_datetime.strptime.side_effect = datetime.strptime
+            mock_datetime.side_effect = lambda *a, **kw: datetime(*a, **kw)
+
+            # Month 13 is invalid -> strptime raises ValueError -> fallback
+            result_path = await handler.save_to_markdown(
+                "URecorder_20261301_221513.wav", "Bad date content"
+            )
+
+        assert result_path.name == "2025-07-15.md"
+
+
+class TestExtractDatetimeFromFilename:
+    """Tests for _extract_datetime_from_filename helper."""
+
+    @pytest.mark.parametrize(
+        "filename, expected",
+        [
+            ("URecorder_20260401_221513.wav", datetime(2026, 4, 1, 22, 15, 13)),
+            ("URecorder_20260401_221513.m4a", datetime(2026, 4, 1, 22, 15, 13)),
+            ("prefix_20250101_000000_suffix.ogg", datetime(2025, 1, 1, 0, 0, 0)),
+        ],
+    )
+    def test_extracts_datetime_from_valid_filenames(self, filename: str, expected: datetime) -> None:
+        assert _extract_datetime_from_filename(filename) == expected
+
+    @pytest.mark.parametrize(
+        "filename",
+        [
+            "voice.ogg",  # no timestamp
+            "Recording_backup_1767099499.wav",  # unix timestamp, not the expected shape
+            "URecorder_20261301_221513.wav",  # invalid month
+            "URecorder_20260401_256000.wav",  # invalid time
+        ],
+    )
+    def test_returns_none_for_invalid_filenames(self, filename: str) -> None:
+        assert _extract_datetime_from_filename(filename) is None
 
 
 class TestProcessTranscription:

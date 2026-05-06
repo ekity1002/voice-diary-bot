@@ -4,6 +4,7 @@ Handles audio transcription using Whisper API and markdown file generation.
 """
 
 import logging
+import re
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -12,6 +13,23 @@ import aiohttp
 from .settings import Settings
 
 logger = logging.getLogger(__name__)
+
+# Matches YYYYMMDD_HHMMSS anywhere in a filename (e.g. URecorder_20260401_221513.wav)
+_FILENAME_DATETIME_PATTERN = re.compile(r"(\d{8})_(\d{6})")
+
+
+def _extract_datetime_from_filename(filename: str) -> datetime | None:
+    """Extract datetime from filenames like ``URecorder_20260401_221513.wav``.
+
+    Returns None if no valid YYYYMMDD_HHMMSS substring is found.
+    """
+    match = _FILENAME_DATETIME_PATTERN.search(filename)
+    if not match:
+        return None
+    try:
+        return datetime.strptime(f"{match.group(1)}_{match.group(2)}", "%Y%m%d_%H%M%S")
+    except ValueError:
+        return None
 
 
 class TranscriptionHandler:
@@ -141,9 +159,15 @@ class TranscriptionHandler:
         """
         logger.info(f"Saving transcript to markdown: {filename}")
 
-        # Get current date for filename
-        now = datetime.now()
-        markdown_filename = now.strftime("%Y-%m-%d.md")
+        # Prefer datetime parsed from the filename; fall back to "now" if absent/invalid.
+        recorded_at = _extract_datetime_from_filename(filename)
+        if recorded_at is None:
+            logger.info(f"No datetime found in filename '{filename}', falling back to current time")
+            recorded_at = datetime.now()
+        else:
+            logger.info(f"Extracted datetime from filename '{filename}': {recorded_at.isoformat()}")
+
+        markdown_filename = recorded_at.strftime("%Y-%m-%d.md")
         output_dir = self.settings.transcription_output_dir
         markdown_path = output_dir / markdown_filename
 
@@ -155,7 +179,7 @@ class TranscriptionHandler:
 
         try:
             # Prepare transcript entry
-            timestamp = now.strftime("%H:%M:%S")
+            timestamp = recorded_at.strftime("%H:%M:%S")
             transcript_entry = f"\n## {timestamp} - {filename}\n\n{transcript}\n"
 
             # Open file in append mode
@@ -163,7 +187,7 @@ class TranscriptionHandler:
                 # If new file, write template header first
                 if not file_exists:
                     logger.info(f"Creating new daily note: {markdown_path}")
-                    template_header = self._generate_daily_template(now)
+                    template_header = self._generate_daily_template(recorded_at)
                     f.write(template_header)
                 else:
                     logger.info(f"Appending to existing daily note: {markdown_path}")
